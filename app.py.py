@@ -4,10 +4,13 @@ import pandas as pd
 # تحميل البيانات
 df = pd.read_csv("sales.csv")
 
-# معالجة الأعمدة لو فيها مشاكل أسماء مكررة
-df.columns = ["Sales Man", "City", "Sales Target", "Sales", "Sales%", "Customer", "Customer_Actual", "Customer%"]
+# تعديل أسماء الأعمدة لتفادي التكرار والمشاكل
+df.columns = [
+    "Sales Man", "City", "Sales Target", "Sales", "Sales%", 
+    "Customer Target", "Customer Actual", "Customer%"
+]
 
-# عنوان الصفحة
+# إعداد الصفحة
 st.set_page_config(page_title="تقرير المبيعات", layout="wide")
 st.title("📊 تقرير المبيعات اليومية")
 
@@ -26,8 +29,8 @@ col2.metric("📉 متوسط المبيعات", f"{df['Sales'].mean():,.0f}")
 col3.metric("🔥 أعلى مبيعات", f"{df['Sales'].max():,.0f}")
 
 # فلترة حسب المندوب أو المدينة
-salesmen = df["Sales Man"].unique()
-cities = df["City"].unique()
+salesmen = df["Sales Man"].dropna().unique()
+cities = df["City"].dropna().unique()
 
 with st.sidebar:
     st.header("🎯 فلترة البيانات")
@@ -46,11 +49,11 @@ def highlight_sales(val):
     try:
         val = float(str(val).replace('%', '').replace(',', ''))
         if val >= 40:
-            return 'background-color: #d4f4dd'  # أخضر فاتح
+            return 'background-color: #d4f4dd'
         elif val >= 30:
-            return 'background-color: #fff3cd'  # أصفر
+            return 'background-color: #fff3cd'
         else:
-            return 'background-color: #f8d7da'  # أحمر فاتح
+            return 'background-color: #f8d7da'
     except:
         return ''
 
