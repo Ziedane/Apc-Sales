@@ -1,18 +1,20 @@
 import streamlit as st
 import pandas as pd
 
-# تحميل البيانات
-df = pd.read_csv("sales.csv")
-
-# تعديل أسماء الأعمدة لتفادي التكرار والمشاكل
-df.columns = [
-    "Sales Man", "City", "Sales Target", "Sales", "Sales%", 
-    "Customer Target", "Customer Actual", "Customer%"
-]
-
 # إعداد الصفحة
 st.set_page_config(page_title="تقرير المبيعات", layout="wide")
 st.title("📊 تقرير المبيعات اليومية")
+
+# تحميل البيانات
+try:
+    df = pd.read_csv("sales.csv")
+except Exception as e:
+    st.error(f"❌ خطأ في تحميل الملف: {e}")
+    st.stop()
+
+# عرض أسماء الأعمدة للمراجعة
+st.write("🧾 الأعمدة الحالية:")
+st.write(df.columns.tolist())
 
 # زر تحميل التقرير
 st.download_button(
@@ -22,29 +24,29 @@ st.download_button(
     mime="text/csv"
 )
 
-# مؤشرات عامة
-col1, col2, col3 = st.columns(3)
-col1.metric("📈 إجمالي المبيعات", f"{df['Sales'].sum():,.0f}")
-col2.metric("📉 متوسط المبيعات", f"{df['Sales'].mean():,.0f}")
-col3.metric("🔥 أعلى مبيعات", f"{df['Sales'].max():,.0f}")
+# مؤشرات عامة (لو الأعمدة موجودة)
+if "Sales" in df.columns:
+    col1, col2, col3 = st.columns(3)
+    col1.metric("📈 إجمالي المبيعات", f"{df['Sales'].sum():,.0f}")
+    col2.metric("📉 متوسط المبيعات", f"{df['Sales'].mean():,.0f}")
+    col3.metric("🔥 أعلى مبيعات", f"{df['Sales'].max():,.0f}")
 
-# فلترة حسب المندوب أو المدينة
-salesmen = df["Sales Man"].dropna().unique()
-cities = df["City"].dropna().unique()
+# فلترة حسب المندوب أو المدينة (لو الأعمدة موجودة)
+if "Sales Man" in df.columns and "City" in df.columns:
+    with st.sidebar:
+        st.header("🎯 فلترة البيانات")
+        selected_salesman = st.selectbox("👤 اختر مندوب المبيعات", options=["الكل"] + sorted(df["Sales Man"].dropna().unique()))
+        selected_city = st.selectbox("🏙️ اختر المدينة", options=["الكل"] + sorted(df["City"].dropna().unique()))
 
-with st.sidebar:
-    st.header("🎯 فلترة البيانات")
-    selected_salesman = st.selectbox("👤 اختر مندوب المبيعات", options=["الكل"] + list(salesmen))
-    selected_city = st.selectbox("🏙️ اختر المدينة", options=["الكل"] + list(cities))
+    filtered_df = df.copy()
+    if selected_salesman != "الكل":
+        filtered_df = filtered_df[filtered_df["Sales Man"] == selected_salesman]
+    if selected_city != "الكل":
+        filtered_df = filtered_df[filtered_df["City"] == selected_city]
+else:
+    filtered_df = df.copy()
 
-# تطبيق الفلتر
-filtered_df = df.copy()
-if selected_salesman != "الكل":
-    filtered_df = filtered_df[filtered_df["Sales Man"] == selected_salesman]
-if selected_city != "الكل":
-    filtered_df = filtered_df[filtered_df["City"] == selected_city]
-
-# تلوين حسب نسبة المبيعات
+# تلوين حسب نسبة المبيعات (لو العمود موجود)
 def highlight_sales(val):
     try:
         val = float(str(val).replace('%', '').replace(',', ''))
@@ -57,8 +59,10 @@ def highlight_sales(val):
     except:
         return ''
 
-styled_df = filtered_df.style.applymap(highlight_sales, subset=["Sales%"])
-
-# عرض الجدول
-st.subheader("📋 جدول المبيعات")
-st.dataframe(styled_df, use_container_width=True)
+if "Sales%" in filtered_df.columns:
+    styled_df = filtered_df.style.applymap(highlight_sales, subset=["Sales%"])
+    st.subheader("📋 جدول المبيعات")
+    st.dataframe(styled_df, use_container_width=True)
+else:
+    st.subheader("📋 جدول المبيعات")
+    st.dataframe(filtered_df, use_container_width=True)
