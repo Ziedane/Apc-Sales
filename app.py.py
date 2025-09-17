@@ -5,16 +5,25 @@ import pandas as pd
 st.set_page_config(page_title="تقرير المبيعات", layout="wide")
 st.title("📊 تقرير المبيعات اليومية")
 
-# تحميل البيانات
+# تحميل البيانات مع تجاهل الأعمدة الفارغة
 try:
     df = pd.read_csv("sales.csv")
+    df = df.loc[:, ~df.columns.str.contains('^Unnamed')]  # حذف الأعمدة اللي اسمها Unnamed
 except Exception as e:
     st.error(f"❌ خطأ في تحميل الملف: {e}")
     st.stop()
 
-# عرض أسماء الأعمدة للمراجعة
-st.write("🧾 الأعمدة الحالية:")
+# عرض الأعمدة للمراجعة
+st.write("🧾 الأعمدة بعد التنظيف:")
 st.write(df.columns.tolist())
+
+# إعادة تسمية الأعمدة لو فيها تكرار أو غموض
+expected_cols = [
+    "Sales Man", "City", "Sales Target", "Sales", "Sales%", 
+    "Customer Target", "Customer Actual", "Customer%"
+]
+if len(df.columns) >= len(expected_cols):
+    df.columns = expected_cols + df.columns[len(expected_cols):].tolist()
 
 # زر تحميل التقرير
 st.download_button(
@@ -24,14 +33,14 @@ st.download_button(
     mime="text/csv"
 )
 
-# مؤشرات عامة (لو الأعمدة موجودة)
+# مؤشرات عامة
 if "Sales" in df.columns:
     col1, col2, col3 = st.columns(3)
     col1.metric("📈 إجمالي المبيعات", f"{df['Sales'].sum():,.0f}")
     col2.metric("📉 متوسط المبيعات", f"{df['Sales'].mean():,.0f}")
     col3.metric("🔥 أعلى مبيعات", f"{df['Sales'].max():,.0f}")
 
-# فلترة حسب المندوب أو المدينة (لو الأعمدة موجودة)
+# فلترة حسب المندوب أو المدينة
 if "Sales Man" in df.columns and "City" in df.columns:
     with st.sidebar:
         st.header("🎯 فلترة البيانات")
@@ -46,7 +55,7 @@ if "Sales Man" in df.columns and "City" in df.columns:
 else:
     filtered_df = df.copy()
 
-# تلوين حسب نسبة المبيعات (لو العمود موجود)
+# تلوين حسب نسبة المبيعات
 def highlight_sales(val):
     try:
         val = float(str(val).replace('%', '').replace(',', ''))
